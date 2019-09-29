@@ -2,6 +2,7 @@ package io.eisner.urban_search
 
 import android.app.Application
 import io.eisner.urban_search.di.appModule
+import io.eisner.urban_search.di.dataModule
 import io.eisner.urban_search.di.networkModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -14,7 +15,7 @@ class App : Application() {
         startKoin {
             androidLogger()
             androidContext(this@App)
-            modules(listOf(appModule, networkModule))
+            modules(listOf(appModule, networkModule, dataModule))
         }
     }
 }
