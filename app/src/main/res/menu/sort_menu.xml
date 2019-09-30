@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/sort"
+        android:icon="@drawable/ic_sort"
+        app:showAsAction="always"
+        android:title="@string/sort" >
+        <menu>
+            <item android:id="@+id/sort_thumbs_up"
+                android:icon="@drawable/ic_thumb_up"
+                android:title="@string/thumbs_up" />
+            <item android:id="@+id/sort_thumbs_down"
+                android:icon="@drawable/ic_thumb_down"
+                android:title="@string/thumbs_down" />
+        </menu>
+    </item>
+</menu>

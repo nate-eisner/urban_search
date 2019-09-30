@@ -1,11 +1,11 @@
 package io.eisner.urban_search.data
 
+import android.util.Log
 import io.eisner.urban_search.data.api.UrbanSearchApi
 import io.eisner.urban_search.data.db.UrbanDatabase
 import io.eisner.urban_search.data.model.UrbanDefinition
-import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
-import io.reactivex.Observable
+import io.reactivex.Maybe
 import io.reactivex.Scheduler
 
 enum class Sort {
@@ -20,32 +20,28 @@ class Repository(
     private val computationScheduler: Scheduler
 ) {
     fun searchFor(word: String, sort: Sort): Flowable<List<UrbanDefinition>> {
-        return Flowable.create({ emitter ->
-            val localDbRead =
+        return Maybe.concat(
+            listOf(
                 database.urbanDefinitionDao().getDefinition(word)
                     .subscribeOn(ioScheduler)
                     .sort(sort)
+                    .observeOn(computationScheduler),
+                api.searchFor(word).toMaybe()
+                    .map { response -> response.list }
+                    .subscribeOn(ioScheduler)
+                    .sort(sort)
                     .observeOn(computationScheduler)
-                    .subscribe { emitter.onNext(it) }
-            val networkSearch = api.searchFor(word)
-                .map { response -> response.list }
-                .subscribeOn(ioScheduler)
-                .sort(sort)
-                .observeOn(computationScheduler)
-                .map {
-                    // save network results to DB
-                    database.urbanDefinitionDao().insertDefinitions(it)
-                    it
-                }
-                .subscribe { emitter.onNext(it) }
-            emitter.setCancellable {
-                localDbRead.dispose()
-                networkSearch.dispose()
-            }
-        }, BackpressureStrategy.LATEST)
+                    .map { apiList ->
+                        Log.d("UrbanSearch", "api list")
+                        // save network results to DB
+                        database.urbanDefinitionDao().insertDefinitions(apiList)
+                        apiList
+                    }.onErrorComplete()
+            )
+        )
     }
 
-    private fun Observable<List<UrbanDefinition>>.sort(sort: Sort): Observable<List<UrbanDefinition>> {
+    private fun Maybe<List<UrbanDefinition>>.sort(sort: Sort): Maybe<List<UrbanDefinition>> {
         return map { definitions ->
             definitions.sortedBy { definition ->
                 if (sort == Sort.ThumbsUp) {
@@ -53,7 +49,7 @@ class Repository(
                 } else {
                     definition.thumbsDown
                 }
-            }
+            }.reversed() // puts highest at the top of the list
         }
     }
 }

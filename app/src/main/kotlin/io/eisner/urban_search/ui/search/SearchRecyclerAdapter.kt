@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import io.eisner.urban_search.R
 import io.eisner.urban_search.data.model.UrbanDefinition
@@ -21,10 +22,26 @@ class SearchRecyclerAdapter : RecyclerView.Adapter<SearchRecyclerAdapter.Definit
         )
     }
 
-    fun showResults(list: List<UrbanDefinition>) {
-        this.list = list
-        // TODO can do diff here to improve UI updates
-        notifyDataSetChanged()
+    fun showResults(newList: List<UrbanDefinition>) {
+        val result = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return newList[newItemPosition].id == list[oldItemPosition].id
+            }
+
+            override fun getOldListSize(): Int {
+                return list.size
+            }
+
+            override fun getNewListSize(): Int {
+                return newList.size
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return newList[newItemPosition].id == list[oldItemPosition].id
+            }
+        })
+        result.dispatchUpdatesTo(this)
+        list = newList
     }
 
     override fun getItemCount(): Int {

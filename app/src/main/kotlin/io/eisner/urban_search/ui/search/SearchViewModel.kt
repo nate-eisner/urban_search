@@ -1,5 +1,6 @@
 package io.eisner.urban_search.ui.search
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,15 +14,20 @@ class SearchViewModel(private val repository: Repository) : ViewModel() {
         get() = _searchResult
     private var _previousSearch = Disposables.disposed()
 
-    fun search(word: String, currentSort: Sort) {
+    fun search(word: CharSequence, currentSort: Sort) {
         _previousSearch.dispose()
-        val searchFlowable = repository.searchFor(word, currentSort)
+        if (word.isEmpty()) {
+            _searchResult.postValue(SearchResult.Data(emptyList()))
+            return
+        }
+        val search = repository.searchFor(word.toString(), currentSort)
             .doOnError {
                 _searchResult.postValue(SearchResult.Error)
             }.doOnSubscribe {
                 _searchResult.postValue(SearchResult.Loading)
             }
-        _previousSearch = searchFlowable.forEach {
+        _previousSearch = search.subscribe {
+            Log.d("UrbanSearch", "emit")
             _searchResult.postValue(SearchResult.Data(it))
         }
     }
