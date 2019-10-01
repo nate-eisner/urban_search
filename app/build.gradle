@@ -6,6 +6,14 @@ apply plugin: 'kotlin-android-extensions'
 
 apply plugin: 'kotlin-kapt'
 
+apply plugin: "kotlin-allopen"
+
+allOpen {
+    // allows mocking for classes w/o directly opening them for release builds
+    // see https://github.com/android/architecture-components-samples
+    annotation 'io.eisner.urban_search.testing.OpenForTesting'
+}
+
 android {
     compileSdkVersion 29
     defaultConfig {
@@ -16,7 +24,7 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "API_KEY", "\"\"")
+        buildConfigField("String", "API_KEY", "\"d77bee910amsh57c44a8f208a4c6p172d78jsnb53a72985d8d\"")
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -50,6 +58,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
 }
 
@@ -91,12 +103,21 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-reactivestreams:$lifecycle_version"
 
     testImplementation 'junit:junit:4.12'
-    testImplementation "org.koin:koin-test:$koin_version"
-    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "androidx.arch.core:core-testing:$lifecycle_version"
 
     androidTestImplementation "androidx.test:core:$android_test_version"
     androidTestImplementation "androidx.test:rules:$android_test_version"
     androidTestImplementation "androidx.test:runner:$android_test_version"
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    androidTestImplementation "androidx.test.espresso:espresso-core:$espresso_version"
+    androidTestImplementation "androidx.test.espresso:espresso-contrib:$espresso_version"
+    androidTestImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"
+    androidTestImplementation("org.koin:koin-test:$koin_version") {
+        exclude group: 'org.jetbrains.kotlin'
+        exclude group: 'org.mockito'
+    }
+    androidTestImplementation('org.mockito:mockito-android:2.23.0') {
+        exclude group: 'org.jetbrains.kotlin'
+        exclude group: 'org.mockito'
+    }
 }

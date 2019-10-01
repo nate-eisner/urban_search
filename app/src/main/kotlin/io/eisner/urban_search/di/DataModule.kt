@@ -18,7 +18,7 @@ val dataModule = module {
         ).build()
     }
 
-    single { Repository(get(), get(), Schedulers.io(), Schedulers.computation()) }
+    factory { Repository(get(), get(), Schedulers.io(), Schedulers.computation()) }
 
     viewModel {
         SearchViewModel(get())

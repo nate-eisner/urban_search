@@ -60,7 +60,7 @@ class SearchFragment : Fragment() {
         recyclerView.adapter = adapter
 
         observeResults(adapter)
-        setupSearchView(adapter)
+        setupSearchView()
     }
 
     override fun onDetach() {
@@ -113,7 +113,7 @@ class SearchFragment : Fragment() {
         })
     }
 
-    private fun setupSearchView(adapter: SearchRecyclerAdapter) {
+    private fun setupSearchView() {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
                 return false
