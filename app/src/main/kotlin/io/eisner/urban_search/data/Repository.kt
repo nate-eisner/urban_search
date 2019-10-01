@@ -4,6 +4,7 @@ import android.util.Log
 import io.eisner.urban_search.data.api.UrbanSearchApi
 import io.eisner.urban_search.data.db.UrbanDatabase
 import io.eisner.urban_search.data.model.UrbanDefinition
+import io.eisner.urban_search.testing.OpenForTesting
 import io.reactivex.Flowable
 import io.reactivex.Maybe
 import io.reactivex.Scheduler
@@ -13,6 +14,7 @@ enum class Sort {
     ThumbsDown,
 }
 
+@OpenForTesting
 class Repository(
     private val database: UrbanDatabase,
     private val api: UrbanSearchApi,
