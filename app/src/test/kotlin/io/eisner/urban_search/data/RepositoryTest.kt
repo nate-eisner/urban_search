@@ -1,69 +1,74 @@
 package io.eisner.urban_search.data
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
 import io.eisner.urban_search.data.api.UrbanSearchApi
 import io.eisner.urban_search.data.db.UrbanDatabase
 import io.eisner.urban_search.data.db.UrbanDefinitionDao
-import io.eisner.urban_search.data.model.UrbanDefinition
+import io.eisner.urban_search.data.model.Track
 import io.eisner.urban_search.testList
 import io.eisner.urban_search.testResponse
-import io.reactivex.Maybe
-import io.reactivex.Single
-import io.reactivex.schedulers.TestScheduler
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
 class RepositoryTest {
-    private val mockDb = mock<UrbanDatabase>()
-    private val mockDao = mock<UrbanDefinitionDao>()
-    private val mockApi = mock<UrbanSearchApi>()
-    private lateinit var testScheduler: TestScheduler
+    private val mockDb = mockk<UrbanDatabase>()
+    private val mockDao = mockk<UrbanDefinitionDao>()
+    private val mockApi = mockk<UrbanSearchApi>()
     private lateinit var repository: Repository
+
     @Before
     fun setup() {
-        whenever(mockDb.urbanDefinitionDao()).thenReturn(mockDao)
-
-        testScheduler = TestScheduler()
-        repository = Repository(mockDb, mockApi, testScheduler, testScheduler)
+        every { mockDb.urbanDefinitionDao() } returns mockDao
+        repository = Repository(mockDb, mockApi)
     }
 
     @Test
     fun testDbAndApiSuccessSearch() {
-        whenever(mockDao.getDefinition(any())).thenReturn(Maybe.just(testList))
-        whenever(mockApi.searchFor(any())).thenReturn(Single.just(testResponse))
-        val testSubscriber = repository.searchFor("testing", Sort.ThumbsUp).test()
-        testScheduler.triggerActions()
+        runBlockingTest {
+            coEvery { mockDao.insertDefinitions(any()) } returns Unit
+            coEvery { mockDao.getTracks(any()) } returns testList
+            coEvery { mockApi.searchFor(any()) } returns testResponse
+            val list = mutableListOf<Pair<Source, List<Track>>>()
+            repository.searchFor("testing", Sort.DSC).toList(list)
 
-        testSubscriber.assertValueCount(2)
-        assertEquals(testList, testSubscriber.values()[0])
-        assertEquals(testList, testSubscriber.values()[1])
-        testSubscriber.assertComplete()
+            assertEquals(2, list.size)
+            assertEquals(testList, list[0].second)
+            assertEquals(testList, list[1].second)
+
+        }
     }
 
     @Test
     fun testOnlyApiSuccessSearch() {
-        whenever(mockDao.getDefinition(any())).thenReturn(Maybe.just(emptyList()))
-        whenever(mockApi.searchFor(any())).thenReturn(Single.just(testResponse))
-        val testSubscriber = repository.searchFor("testing", Sort.ThumbsUp).test()
-        testScheduler.triggerActions()
+        runBlockingTest {
+            coEvery { mockDao.insertDefinitions(any()) } returns Unit
+            coEvery { mockDao.getTracks(any()) } returns emptyList()
+            coEvery { mockApi.searchFor(any()) } returns testResponse
+            val list = mutableListOf<Pair<Source, List<Track>>>()
+            repository.searchFor("testing", Sort.DSC).toList(list)
 
-        testSubscriber.assertValueCount(2)
-        assertEquals(emptyList<UrbanDefinition>(), testSubscriber.values()[0])
-        assertEquals(testList, testSubscriber.values()[1])
-        testSubscriber.assertComplete()
+            assertEquals(2, list.size)
+            assertEquals(emptyList<Track>(), list[0].second)
+            assertEquals(testList, list[1].second)
+        }
     }
 
     @Test
     fun testDbSuccessApiErrorSearch() {
-        whenever(mockDao.getDefinition(any())).thenReturn(Maybe.just(testList))
-        whenever(mockApi.searchFor(any())).thenReturn(Single.error(Throwable("Something broken")))
-        val testSubscriber = repository.searchFor("testing", Sort.ThumbsUp).test()
-        testScheduler.triggerActions()
+        runBlockingTest {
+            coEvery { mockDao.insertDefinitions(any()) } returns Unit
+            coEvery { mockDao.getTracks(any()) } returns testList
+            coEvery { mockApi.searchFor(any()) } throws Throwable("Something broken")
+            val list = mutableListOf<Pair<Source, List<Track>>>()
+            repository.searchFor("testing", Sort.DSC).catch { }.toList(list)
 
-        assertEquals(testList, testSubscriber.values().last())
-        testSubscriber.assertComplete()
+            assertEquals(testList, list.last().second)
+        }
     }
 }

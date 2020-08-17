@@ -14,7 +14,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 val networkModule = module {
-    single { createNetworkClient("https://mashape-community-urban-dictionary.p.rapidapi.com/") }
+    single { createNetworkClient(BuildConfig.BASE_URL) }
     single { get<Retrofit>().create(UrbanSearchApi::class.java) }
 }
 
@@ -22,9 +22,9 @@ private class AppendedInterceptor() : Interceptor {
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+        val newUrl = request.url.newBuilder().addQueryParameter("api_key", BuildConfig.API_KEY).build()
         val newRequest = request.newBuilder()
-            .addHeader("X-RapidAPI-Host", "mashape-community-urban-dictionary.p.rapidapi.com")
-            .addHeader("X-RapidAPI-Key", BuildConfig.API_KEY)
+            .url(newUrl)
             .build()
         return chain.proceed(newRequest)
     }

@@ -10,40 +10,34 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import androidx.appcompat.widget.SearchView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.isVisible
+import androidx.core.widget.ContentLoadingProgressBar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import io.eisner.urban_search.R
 import io.eisner.urban_search.data.Sort
+import io.eisner.urban_search.data.Source
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class SearchFragment : Fragment() {
-
-    companion object {
-        fun newInstance() = SearchFragment()
-    }
-
     private val viewModel: SearchViewModel by viewModel()
-    private var currentSort: Sort = Sort.ThumbsUp
+    private var currentSort: Sort = Sort.ASC
 
-    private val searchView: SearchView by lazy { activity!!.findViewById<SearchView>(R.id.search_view) }
-
-    private lateinit var loadingHandler: Handler
-    private val loadingRunnable = Runnable {
-        Snackbar.make(
-            activity!!.findViewById<CoordinatorLayout>(R.id.container),
-            R.string.loading,
-            Snackbar.LENGTH_SHORT
-        ).show()
+    private val searchView: SearchView by lazy { requireActivity().findViewById<SearchView>(R.id.search_view) }
+    private val loadingView: ProgressBar by lazy {
+        requireActivity().findViewById<ProgressBar>(
+            R.id.loading
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
-        loadingHandler = Handler(Looper.getMainLooper())
     }
 
     override fun onCreateView(
@@ -55,17 +49,12 @@ class SearchFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        val recyclerView = activity!!.findViewById<RecyclerView>(R.id.recycler)
+        val recyclerView = requireActivity().findViewById<RecyclerView>(R.id.recycler)
         val adapter = SearchRecyclerAdapter()
         recyclerView.adapter = adapter
 
         observeResults(adapter)
         setupSearchView()
-    }
-
-    override fun onDetach() {
-        loadingHandler.removeCallbacks(loadingRunnable)
-        super.onDetach()
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -75,12 +64,12 @@ class SearchFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.sort_thumbs_up -> {
-                currentSort = Sort.ThumbsUp
+                currentSort = Sort.ASC
                 viewModel.search(searchView.query, currentSort)
                 true
             }
             R.id.sort_thumbs_down -> {
-                currentSort = Sort.ThumbsDown
+                currentSort = Sort.DSC
                 viewModel.search(searchView.query, currentSort)
                 true
             }
@@ -89,21 +78,25 @@ class SearchFragment : Fragment() {
     }
 
     private fun observeResults(adapter: SearchRecyclerAdapter) {
-        viewModel.searchResult.observe(this, Observer { results ->
+        viewModel.searchResult.observe(viewLifecycleOwner, Observer { results ->
             when (results) {
                 is SearchResult.Data -> {
-                    loadingHandler.removeCallbacks(loadingRunnable)
+                    if (results.source == Source.Remote ||
+                        (results.source == Source.Local && results.data.isNotEmpty())
+                    ) {
+                        loadingView.isVisible = false
+                    }
                     adapter.showResults(results.data)
                     Log.d("UrbanSearch", "Set Data...")
                 }
                 is SearchResult.Loading -> {
-                    loadingHandler.postDelayed(loadingRunnable, 1500)
+                    loadingView.isVisible = true
                     Log.d("UrbanSearch", "Loading...")
                 }
                 is SearchResult.Error -> {
-                    loadingHandler.removeCallbacks(loadingRunnable)
+                    loadingView.isVisible = false
                     Snackbar.make(
-                        activity!!.findViewById<CoordinatorLayout>(R.id.container),
+                        requireActivity().findViewById<CoordinatorLayout>(R.id.container),
                         R.string.error,
                         Snackbar.LENGTH_SHORT
                     ).show()
@@ -121,7 +114,7 @@ class SearchFragment : Fragment() {
 
             override fun onQueryTextChange(newText: String): Boolean {
                 Log.d("UrbanSearch", "Searching for $newText...")
-                viewModel.search(newText, Sort.ThumbsUp)
+                viewModel.search(newText, Sort.DSC)
                 return true
             }
         })

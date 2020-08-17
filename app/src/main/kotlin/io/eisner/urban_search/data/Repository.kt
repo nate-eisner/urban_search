@@ -1,57 +1,39 @@
 package io.eisner.urban_search.data
 
-import android.util.Log
 import io.eisner.urban_search.data.api.UrbanSearchApi
 import io.eisner.urban_search.data.db.UrbanDatabase
-import io.eisner.urban_search.data.model.UrbanDefinition
+import io.eisner.urban_search.data.model.Track
 import io.eisner.urban_search.testing.OpenForTesting
-import io.reactivex.Flowable
-import io.reactivex.Maybe
-import io.reactivex.Scheduler
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 enum class Sort {
-    ThumbsUp,
-    ThumbsDown,
+    ASC,
+    DSC,
+}
+
+enum class Source {
+    Local,
+    Remote
 }
 
 @OpenForTesting
 class Repository(
     private val database: UrbanDatabase,
-    private val api: UrbanSearchApi,
-    private val ioScheduler: Scheduler,
-    private val computationScheduler: Scheduler
+    private val api: UrbanSearchApi
 ) {
-    fun searchFor(word: String, sort: Sort): Flowable<List<UrbanDefinition>> {
-        return Maybe.concat(
-            listOf(
-                database.urbanDefinitionDao().getDefinition(word)
-                    .subscribeOn(ioScheduler)
-                    .sort(sort)
-                    .observeOn(computationScheduler),
-                api.searchFor(word).toMaybe()
-                    .map { response -> response.list }
-                    .subscribeOn(ioScheduler)
-                    .sort(sort)
-                    .observeOn(computationScheduler)
-                    .map { apiList ->
-                        Log.d("UrbanSearch", "api list")
-                        // save network results to DB
-                        database.urbanDefinitionDao().insertDefinitions(apiList)
-                        apiList
-                    }.onErrorComplete()
-            )
-        )
+    suspend fun searchFor(name: String, sort: Sort): Flow<Pair<Source, List<Track>>> = flow {
+        emit(Source.Local to database.urbanDefinitionDao().getTracks(name).sort(sort))
+        val search = api.searchFor(name).results.trackMatches.track.sort(sort)
+        emit(Source.Remote to search)
+        database.urbanDefinitionDao().insertDefinitions(search)
     }
 
-    private fun Maybe<List<UrbanDefinition>>.sort(sort: Sort): Maybe<List<UrbanDefinition>> {
-        return map { definitions ->
-            definitions.sortedBy { definition ->
-                if (sort == Sort.ThumbsUp) {
-                    definition.thumbsUp
-                } else {
-                    definition.thumbsDown
-                }
-            }.reversed() // puts highest at the top of the list
+    private fun List<Track>.sort(sort: Sort): List<Track> {
+        val sortedBy = this.sortedBy { it.listeners }
+        return when (sort) {
+            Sort.ASC -> sortedBy
+            Sort.DSC -> sortedBy.reversed()
         }
     }
 }
