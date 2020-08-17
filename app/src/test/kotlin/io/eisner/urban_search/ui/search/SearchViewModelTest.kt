@@ -1,15 +1,15 @@
 package io.eisner.urban_search.ui.search
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
 import io.eisner.urban_search.data.Repository
 import io.eisner.urban_search.data.Sort
+import io.eisner.urban_search.data.Source
 import io.eisner.urban_search.observeOnce
 import io.eisner.urban_search.testList
-import io.reactivex.BackpressureStrategy
-import io.reactivex.Flowable
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -19,39 +19,37 @@ class SearchViewModelTest {
     @get:Rule
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
-    private val mockRepository = mock<Repository>()
-    private lateinit var viewModel: SearchViewModel
-
-    @Before
-    fun setup() {
-        viewModel = SearchViewModel(mockRepository)
-    }
+    private val mockRepository = mockk<Repository>()
 
     @Test
     fun doSuccessfulSearch() {
-        whenever(mockRepository.searchFor(any(), any())).thenReturn(Flowable.just(testList))
+        val viewModel = SearchViewModel(mockRepository)
+        runBlockingTest {
+            coEvery { mockRepository.searchFor(any(), any()) } returns flow {
+                emit(Source.Remote to testList)
+            }
 
-        viewModel.search("test", Sort.ThumbsUp)
+            viewModel.search("test", Sort.ASC)
 
-        viewModel.searchResult.observeOnce { result ->
-            assert(result is SearchResult.Data)
-            assertEquals(testList, (result as SearchResult.Data).data)
+            viewModel.searchResult.observeOnce { result ->
+                assert(result is SearchResult.Data)
+                assertEquals(testList, (result as SearchResult.Data).data)
+            }
         }
     }
 
     @Test
     fun loadingState() {
-        whenever(mockRepository.searchFor(any(), any())).thenReturn(
-            Flowable.create(
-                {},
-                BackpressureStrategy.LATEST
-            )
-        )
+        val viewModel = SearchViewModel(mockRepository)
+        runBlockingTest {
+            coEvery { mockRepository.searchFor(any(), any()) } returns flow {
+                emit(Source.Remote to emptyList())
+            }
+            viewModel.search("test", Sort.DSC)
 
-        viewModel.search("test", Sort.ThumbsUp)
-
-        viewModel.searchResult.observeOnce { result ->
-            assert(result is SearchResult.Loading)
+            viewModel.searchResult.observeOnce { result ->
+                assert(result is SearchResult.Loading)
+            }
         }
     }
 }

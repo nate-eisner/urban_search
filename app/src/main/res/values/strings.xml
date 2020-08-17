@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Urban Search</string>
+    <string name="app_name">Last.fm Search</string>
     <string name="sort">Sort By</string>
-    <string name="thumbs_up">Thumbs Up</string>
-    <string name="thumbs_down">Thumbs Down</string>
+    <string name="thumbs_up">ASC</string>
+    <string name="thumbs_down">DSC</string>
     <string name="error">An Error Occurred</string>
-    <string name="loading">Loading...</string>
+    <string name="loading">Loading…</string>
 </resources>

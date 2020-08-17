@@ -4,17 +4,16 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import io.eisner.urban_search.data.model.UrbanDefinition
-import io.reactivex.Maybe
+import io.eisner.urban_search.data.model.Track
 
 @Dao
 interface UrbanDefinitionDao {
-    @Query("SELECT * FROM urban_definitions WHERE word = :word")
-    fun getDefinition(word: String): Maybe<List<UrbanDefinition>>
+    @Query("SELECT * FROM tracks WHERE name = :songName")
+    suspend fun getTracks(songName: String): List<Track>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertDefinitions(definitions: List<UrbanDefinition>)
+    fun insertDefinitions(definitions: List<Track>)
 
-    @Query("DELETE FROM urban_definitions")
+    @Query("DELETE FROM tracks")
     fun clear()
 }
